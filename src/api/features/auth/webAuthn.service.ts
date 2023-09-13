@@ -18,11 +18,40 @@ export class WebAuthnService {
   constructor (
     private userService: UserService,
     @InjectRepository(UserDevice) private userDeviceRepo: EntityRepository<UserDevice>,
-    configService: ConfigService
+    private configService: ConfigService
   ) {
     this.rpName = `${APP_NAME} - ${configService.getOrThrow('envName')}`;
     this.rpId = new URL(configService.getOrThrow('envUrl')).hostname;
   }
+
+
+
+  getDeviceCountByUserId (userId: number) {
+    return this.userDeviceRepo.count({
+      user: {
+        id: userId
+      }
+    });
+  }
+
+  getDevicesByUserId (userId: number) {
+    return this.userDeviceRepo.find({
+      user: {
+        id: userId
+      }
+    });
+  }
+
+  removeDeviceById (id: number, userId: number) {
+    return this.userDeviceRepo.getEntityManager().nativeDelete(UserDevice, {
+      user: {
+        id: userId
+      },
+      id
+    });
+  }
+
+
   async startWebAuthnRegistration (userId: number) {
     const [user, devices] = await Promise.all([
       this.userService.getUserById(userId),
@@ -33,7 +62,7 @@ export class WebAuthnService {
       rpName: this.rpName,
       rpID: this.rpId,
       userID: '' + user.id,
-      userName: user.email,
+      userName: user.username,
       timeout: 60000,
       attestationType: 'none',
       /**
@@ -48,7 +77,8 @@ export class WebAuthnService {
         transports: dev.transports,
       })),
       authenticatorSelection: {
-        residentKey: 'discouraged',
+        residentKey: 'preferred',
+        userVerification: 'preferred',
       },
       /**
        * Support the two most common algorithms: ES256, and RS256
@@ -56,7 +86,7 @@ export class WebAuthnService {
       supportedAlgorithmIDs: [-7, -257],
     };
 
-    const options = generateRegistrationOptions(opts);
+    const options = await generateRegistrationOptions(opts);
 
     await this.userService.updateUser(user, { currentWebAuthnChallenge: options.challenge });
 
@@ -80,7 +110,7 @@ export class WebAuthnService {
       const opts: VerifyRegistrationResponseOpts = {
         response: registrationResponse,
         expectedChallenge: `${expectedChallenge}`,
-        expectedOrigin: `https://${this.rpId}`,
+        expectedOrigin: this.configService.getOrThrow('envUrl'),
         expectedRPID: this.rpId,
         requireUserVerification: true,
       };
@@ -149,37 +179,11 @@ export class WebAuthnService {
     };
 
     
-    const options = generateAuthenticationOptions(opts);
+    const options = await generateAuthenticationOptions(opts);
     await this.userService.updateUser(user, { currentWebAuthnChallenge: options.challenge });
 
     return options;
   }
-
-  getDeviceCountByUserId (userId: number) {
-    return this.userDeviceRepo.count({
-      user: {
-        id: userId
-      }
-    });
-  }
-
-  getDevicesByUserId (userId: number) {
-    return this.userDeviceRepo.find({
-      user: {
-        id: userId
-      }
-    });
-  }
-
-  removeDeviceById (id: number, userId: number) {
-    return this.userDeviceRepo.getEntityManager().nativeDelete(UserDevice, {
-      user: {
-        id: userId
-      },
-      id
-    });
-  }
-
   async verifyWebAuthn(userId: number, verificationOptions: AuthenticationResponseJSON) {
     const [user, devices] = await Promise.all([
       this.userService.getUserById(userId),
@@ -202,7 +206,7 @@ export class WebAuthnService {
       const opts: VerifyAuthenticationResponseOpts = {
         response: verificationOptions,
         expectedChallenge: `${expectedChallenge}`,
-        expectedOrigin: `https://${this.rpId}`,
+        expectedOrigin: this.configService.getOrThrow('envUrl'),
         expectedRPID: this.rpId,
         authenticator,
         requireUserVerification: true

@@ -13,7 +13,7 @@ export class UserService {
 
   async createUser(user: CreateUserDTO): Promise<User> {
     const newUser = this.em.create(User, plainToClass(User, user));
-    await this.em.insert(User, newUser);
+    await this.em.persistAndFlush(newUser);
   
     return newUser;
   }
@@ -32,6 +32,13 @@ export class UserService {
     return foundUser;
   }
 
+  async getUserByUsername(username: string) {
+    const foundUser = await this.userRepo.findOne({
+      username
+    });
+
+    return foundUser;
+  }
   async updateUser(user: User, updates: Partial<User>) {
     const newUser = wrap(user).assign(updates, { em: this.em });
     await this.em.flush();

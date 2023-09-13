@@ -12,6 +12,7 @@ export class AdminSeeder extends Seeder {
     if (existingUserCount === 0) {
       const user = em.create(User, {
         email: 'admin@holyham.cloud',
+        username: 'admin',
         password: await hash('Password123!', AUTH_SALT_ROUNDS),
         needPasswordReset: true,
         emailConfirmed: true,
