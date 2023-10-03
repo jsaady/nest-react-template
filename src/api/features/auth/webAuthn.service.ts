@@ -24,8 +24,6 @@ export class WebAuthnService {
     this.rpId = new URL(configService.getOrThrow('envUrl')).hostname;
   }
 
-
-
   getDeviceCountByUserId (userId: number) {
     return this.userDeviceRepo.count({
       user: {
@@ -42,13 +40,28 @@ export class WebAuthnService {
     });
   }
 
-  removeDeviceById (id: number, userId: number) {
-    return this.userDeviceRepo.getEntityManager().nativeDelete(UserDevice, {
+  async getDeviceByCredentialId (credentialId: Uint8Array, userId: number) {
+    return this.userDeviceRepo.findOne({
+      user: {
+        id: userId
+      },
+      credentialID: credentialId
+    });
+  }
+
+  async removeDeviceById (id: number, userId: number) {
+    const device = await this.userDeviceRepo.findOne({
       user: {
         id: userId
       },
       id
     });
+
+    if (!device) {
+      throw new BadRequestException('Device does not exist');
+    }
+
+    await this.userDeviceRepo.getEntityManager().removeAndFlush([device]);
   }
 
 
@@ -185,17 +198,16 @@ export class WebAuthnService {
     return options;
   }
   async verifyWebAuthn(userId: number, verificationOptions: AuthenticationResponseJSON) {
-    const [user, devices] = await Promise.all([
+    const bodyCredIDBuffer = isoBase64URL.toBuffer(verificationOptions.rawId);
+
+    const [user, authenticator] = await Promise.all([
       this.userService.getUserById(userId),
-      this.getDevicesByUserId(userId)
+      this.getDeviceByCredentialId(bodyCredIDBuffer, userId)
     ]);
 
     const expectedChallenge = user.currentWebAuthnChallenge;
 
-    const bodyCredIDBuffer = isoBase64URL.toBuffer(verificationOptions.rawId);
-
     // TODO: do the filter at the DB level
-    const authenticator = devices.find(device => isoUint8Array.areEqual(device.credentialID, bodyCredIDBuffer));
 
     if (!authenticator) {
       throw new BadRequestException('Authenticator is not registered with this site');
