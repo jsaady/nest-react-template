@@ -28,6 +28,10 @@ await schema.dropSchema({ dropMigrationsTable: true });
 console.log('Migrating...', await orm.getMigrator().getPendingMigrations());
 await orm.getMigrator().up();
 
+console.log(orm.config.getClientUrl());
+// log all of the current tables for the connection
+console.log(await orm.em.raw('SELECT * FROM information_schema.tables WHERE table_schema=\'public\''));
+
 console.log('Migration done! Seeding...');
 await orm.seeder.seed(DefaultSeeder);
 

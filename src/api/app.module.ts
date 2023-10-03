@@ -67,8 +67,4 @@ const currentDir = resolve(new URL(import.meta.url).pathname, '..');
     useClass: ThrottlerGuard
   }],
 })
-export class AppModule implements NestModule {
-  async configure(consumer: MiddlewareConsumer) {
-    console.log('here');
-  }
-}
+export class AppModule {}
