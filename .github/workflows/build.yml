@@ -83,6 +83,7 @@ jobs:
   deploy:
     runs-on: onsite
     environment: production
+    if: github.ref == 'refs/heads/main'
     needs:
       - build-and-push-image
       - test
