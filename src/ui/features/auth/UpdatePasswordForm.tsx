@@ -4,7 +4,7 @@ import { useForm } from '../../utils/forms.js';
 import { FetchError } from '../../utils/http.js';
 import { useAsyncHttp } from '../../utils/useAsync.js';
 import { useAuthorization } from '../../utils/useAuth.js';
-import { ErrorBanner } from './Banner.tsx';
+import { ErrorBanner } from './Banner.js';
 import { LoginForm } from './LoginElements.js';
 import { LoginResponse } from './types.js';
 
