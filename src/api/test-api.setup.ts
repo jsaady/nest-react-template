@@ -18,16 +18,17 @@ const orm = await MikroORM.init<PostgreSqlDriver>(getTestMikroOrmConfig([MockEnt
 
 const schema = orm.getSchemaGenerator();
 
+console.log('Ensuring database...');
 await schema.ensureDatabase();
 
+console.log('Dropping schema...');
 await schema.dropSchema({ dropMigrationsTable: true });
 
-// await schema.createSchema();
 
-// await orm.schema.createDatabase('test');
-
+console.log('Migrating...', await orm.getMigrator().getPendingMigrations());
 await orm.getMigrator().up();
 
+console.log('Migration done! Seeding...');
 await orm.seeder.seed(DefaultSeeder);
 
 await orm.close();
