@@ -74,6 +74,7 @@ jobs:
       run: npm test
       env:
         DATABASE_URL: "postgres://postgres:postgres@postgres:5432/postgres"
+        DATABASE_PASSWORD: postgres
     # - name: Lint
     #   run: npm lint
 
