@@ -4,7 +4,7 @@ import {getTestMikroOrmConfig} from "../db/testConfig.js";
 export const CreateMikroORM = (entities: any[]) => {
   return [
     MikroOrmModule.forRootAsync({
-      useFactory: () => getTestMikroOrmConfig(entities),
+      useFactory: () => getTestMikroOrmConfig(),
     }),
     MikroOrmModule.forFeature(entities),
   ]
