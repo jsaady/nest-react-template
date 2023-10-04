@@ -7,7 +7,10 @@ import { User } from '../../features/users/users.entity.js';
 export class AdminSeeder extends Seeder {
   async run(em: EntityManager): Promise<void> {
 
-    console.log('postseed', await em.getConnection().execute('SELECT * FROM information_schema.tables WHERE table_schema=\'public\''))
+    console.log('postseed', 
+      await em.getConnection().execute('SELECT * FROM information_schema.tables WHERE table_schema=\'public\''),
+      await em.getConnection().execute('SHOW search_path;')
+    );
 
     const existingUserCount = await em.count(User);
 
