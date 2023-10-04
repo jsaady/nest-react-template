@@ -5,7 +5,6 @@ export function getTestMikroOrmConfig (): Options {
     return defineConfig({
         clientUrl: process.env.DATABASE_URL!,
         password: process.env.DATABASE_PASSWORD!,
-        debug: true,
         // entities,
         allowGlobalContext: true,
         namingStrategy: UnderscoreNamingStrategy,
