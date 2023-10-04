@@ -2,12 +2,12 @@ import { MikroORM } from '@mikro-orm/core';
 import { Test, TestingModule } from '@nestjs/testing';
 import { VerifiedAuthenticationResponse, VerifiedRegistrationResponse, generateAuthenticationOptions, generateRegistrationOptions, verifyAuthenticationResponse, verifyRegistrationResponse } from '@simplewebauthn/server';
 import { isoBase64URL } from '@simplewebauthn/server/helpers';
-import { MockConfigModule } from '../../testFixtures/config.mock.ts';
-import { CreateMikroORM } from '../../testFixtures/mikroOrm.mock.ts';
-import { User } from '../users/users.entity.ts';
-import { UserService } from '../users/users.service.ts';
-import { UserDevice } from './entities/userDevice.entity.ts';
-import { WebAuthnService } from './webAuthn.service.ts';
+import { MockConfigModule } from '../../testFixtures/config.mock.js';
+import { CreateMikroORM } from '../../testFixtures/mikroOrm.mock.js';
+import { User } from '../users/users.entity.js';
+import { UserService } from '../users/users.service.js';
+import { UserDevice } from './entities/userDevice.entity.js';
+import { WebAuthnService } from './webAuthn.service.js';
 
 jest.mock('@simplewebauthn/server', () => ({
   generateRegistrationOptions: jest.fn(),
