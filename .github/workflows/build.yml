@@ -71,8 +71,6 @@ jobs:
       run: npm ci
     - name: Build
       run: npm run build
-    - name: Env debug
-      run: env
     - name: Run tests
       run: npm test
       env:
