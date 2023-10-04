@@ -1,14 +1,15 @@
-import {EntityClass} from "@mikro-orm/core";
+import {EntityClass, UnderscoreNamingStrategy} from "@mikro-orm/core";
 import {defineConfig, Options} from "@mikro-orm/postgresql";
 
-export function getTestMikroOrmConfig (entities: string[]|EntityClass<any>[] = ['./**/*.entity.js']): Options {
+export function getTestMikroOrmConfig (): Options {
     return defineConfig({
         clientUrl: process.env.DATABASE_URL!,
         password: process.env.DATABASE_PASSWORD!,
         debug: true,
         // entities,
         allowGlobalContext: true,
-        entities,
+        namingStrategy: UnderscoreNamingStrategy,
+        entities: ['./**/*.entity.js'],
         entitiesTs: ['./**/*.entity.ts'],
         migrations: {
             disableForeignKeys: false,

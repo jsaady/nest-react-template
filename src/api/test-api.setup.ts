@@ -4,17 +4,12 @@ import dotenv from 'dotenv';
 import { DefaultSeeder } from './db/seeds/DefaultSeeder.js';
 import { getTestMikroOrmConfig } from "./db/testConfig.js";
 
-@Entity()
-export class MockEntity {
-  @PrimaryKey()
-  id!: number;
-}
 
 dotenv.config({
   path: '.env.test'
 });
 
-const orm = await MikroORM.init<PostgreSqlDriver>(getTestMikroOrmConfig([MockEntity]));
+const orm = await MikroORM.init<PostgreSqlDriver>(getTestMikroOrmConfig());
 
 const schema = orm.getSchemaGenerator();
 
