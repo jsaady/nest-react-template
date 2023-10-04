@@ -30,7 +30,7 @@ await orm.getMigrator().up();
 
 console.log(orm.config.getClientUrl());
 // log all of the current tables for the connection
-console.log(await orm.em.raw('SELECT * FROM information_schema.tables WHERE table_schema=\'public\''));
+console.log('preseed', await orm.em.raw('SELECT * FROM information_schema.tables WHERE table_schema=\'public\''));
 
 console.log('Migration done! Seeding...');
 await orm.seeder.seed(DefaultSeeder);
