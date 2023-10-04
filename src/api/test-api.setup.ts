@@ -2,7 +2,7 @@ import { Entity, MikroORM, PrimaryKey } from '@mikro-orm/core';
 import { PostgreSqlDriver } from '@mikro-orm/postgresql';
 import dotenv from 'dotenv';
 import { DefaultSeeder } from './db/seeds/DefaultSeeder.js';
-import {getTestMikroOrmConfig} from "./db/testConfig.js";
+import { getTestMikroOrmConfig } from "./db/testConfig.js";
 
 @Entity()
 export class MockEntity {
@@ -36,3 +36,5 @@ console.log('Migration done! Seeding...');
 await orm.seeder.seed(DefaultSeeder);
 
 await orm.close();
+
+console.log('Done!');
