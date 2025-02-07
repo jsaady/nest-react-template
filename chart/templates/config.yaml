@@ -1,0 +1,53 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: static-config
+data:
+{{- with (first .Values.ingress.hosts) }}
+  ENVIRONMENT_URL: "https://{{ .host }}"
+{{- end }}
+  ENVIRONMENT_NAME: {{ .Values.params.environmentName }}
+  EMAIL_HOST: {{ .Values.params.emailHost }}
+  EMAIL_PORT: "{{ .Values.params.emailPort }}"
+  EMAIL_USER: {{ .Values.params.emailUser }}
+  EMAIL_REPLY_TO: {{ .Values.params.emailReplyTo }}
+{{- if .Values.postgres.enabled }}
+  DATABASE_URL: postgres://postgres:{{ .Values.postgres.defaultPassword }}@postgres-service:5432/app
+{{- else }}
+  DATABASE_URL: {{ .Values.postgres.connectionString }}
+{{- end }}
+{{- if .Values.postgres.caCertificate }}
+  DB_CA_CERTIFICATE: {{ .Values.postgres.caCertificate | quote }}
+{{- end }}
+  REQUIRE_MFA: "{{ .Values.params.requireMfa }}"
+  REQUIRE_EMAIL_VERIFICATION: "{{ .Values.params.requireEmailVerification }}"
+  ALLOW_REGISTRATION: "{{ .Values.params.allowRegistration }}"
+  GOOGLE_SPREADSHEET_ID: "{{ .Values.params.googleSpreadsheetId }}"
+{{ if .Values.telemetry.opentelemetry.enabled }}
+  OTEL_EXPORTER_OTLP_ENDPOINT: "{{ .Values.telemetry.opentelemetry.otlp_url }}"
+  OTEL_EXPORTER_OTLP_INSECURE: "{{ .Values.telemetry.opentelemetry.otlp_insecure }}"
+  OTEL_SERVICE_NAME: {{ .Chart.Name }} - {{ .Values.params.environmentName }}
+  OTEL_SDK_DISABLED: "false"
+{{ else }}
+  OTEL_SDK_DISABLED: "true"
+{{ end }}
+{{ if .Values.telemetry.pyroscope.enabled }}
+  PYROSCOPE_ENABLED: "true"
+  PYROSCOPE_SERVER_ADDRESS: "{{ .Values.telemetry.pyroscope.pyroscope_url }}"
+  PYROSCOPE_APPLICATION_NAME: "{{ .Chart.Name }}_{{ .Values.params.environmentName }}"
+{{ else }}
+  PYROSCOPE_ENABLED: "false"
+{{ end }}
+---
+
+apiVersion: v1
+kind: Secret
+type: Opaque
+metadata:
+  name: app-secrets
+data:
+  EMAIL_PASSWORD: {{ .Values.params.emailPassword | b64enc }}
+  DEFAULT_ROOT_PASSWORD: {{ .Values.params.defaultRootPassword | b64enc }}
+  STADIA_MAP_API_KEY: {{ .Values.params.stadiaApiKey | b64enc }}
+  NINJA_API_KEY: {{ .Values.params.ninjaApiKey | b64enc }}
+  GOOGLE_CREDS: {{ .Values.params.googleCreds | b64enc }}

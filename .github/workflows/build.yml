@@ -10,10 +10,13 @@
 name: Create and publish a Docker image
 
 on:
+  workflow_dispatch:
   pull_request:
     branches: ['main']
   push:
     branches: ['main']
+    paths-ignore:
+      - 'chart/**'
 
 env:
   REGISTRY: ghcr.io
@@ -22,39 +25,11 @@ env:
   DOMAIN_NAME: ${{ github.repository_owner }}-${{ github.ref_name }}.apps.holyham.cloud
 
 jobs:
-  build-and-push-image:
-    container:
-      image: catthehacker/ubuntu:act-22.04
-    permissions: write-all
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v3
-
-      - name: Log in
-        run: docker login ${{ env.REGISTRY }} -u ${{ github.actor }} -p ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Build
-        run: |
-           docker build \
-            -t ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.TAG_NAME }} \
-            -t ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }} \
-            .
-
-      - name: Push
-        if: github.ref == 'refs/heads/main'
-        run: docker push -a ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
-
-      - name: Cleanup
-        run: |
-          docker logout
-          docker system prune -a -f
-
   test:
     runs-on: ubuntu-latest
     services:
       postgres:
-        image: postgres:15.4
+        image: ankane/pgvector:latest
         env:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres
@@ -63,7 +38,7 @@ jobs:
           - 5432:5432
         options: --health-cmd pg_isready --health-interval 10s --health-timeout 5s --health-retries 5
     container:
-      image: node
+      image: node:20
     steps:
     - name: Checkout repo
       uses: actions/checkout@v3
@@ -78,29 +53,117 @@ jobs:
         DATABASE_PASSWORD: postgres
     # - name: Lint
     #   run: npm lint
+  build:
+    runs-on: ubuntu
+    # runs-on: self-hosted
+    permissions:
+      contents: read
+      packages: write
+      # This is used to complete the identity challenge
+      # with sigstore/fulcio when running outside of PRs.
+      id-token: write
+
+    outputs:
+      tags: ${{ steps.meta.outputs.tags }}
+
+    steps:
+
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      # Install the cosign tool except on PR
+      # https://github.com/sigstore/cosign-installer
+      - name: Install cosign
+        if: github.event_name != 'pull_request'
+        uses: sigstore/cosign-installer@v3.5.0 #v3.1.1
+
+      # Set up BuildKit Docker container builder to be able to build
+      # multi-platform images and export cache
+      # https://github.com/docker/setup-buildx-action
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@f95db51fddba0c2d1ec667646a06c2ce06100226 # v3.0.0
+
+      # Login against a Docker registry except on PR
+      # https://github.com/docker/login-action
+      - name: Log into registry ${{ env.REGISTRY }}
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@343f7c4344506bcbf9b4de18042ae17996df046d # v3.0.0
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # Extract metadata (tags, labels) for Docker
+      # https://github.com/docker/metadata-action
+      - name: Extract Docker metadata
+        id: meta
+        uses: docker/metadata-action@96383f45573cb7f253c731d3b3ab81c87ef81934 # v5.0.0
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            # minimal (short sha)
+            type=sha
+
+      # Build and push Docker image with Buildx (don't push on PR)
+      # https://github.com/docker/build-push-action
+      - name: Build and push Docker image
+        id: build-and-push
+        uses: docker/build-push-action@0565240e2d4ab88bba5387d719585280857ece09 # v5.0.0
+        with:
+          context: .
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          # cache-from: type=gha
+          # cache-to: type=gha,mode=max
+          platforms: linux/arm64
+  # build_helm:
+  #   runs-on: ubuntu
+  #   needs:
+  #     - build
+  #   permissions:
+  #     contents: read
+  #     packages: write
+  #     # This is used to complete the identity challenge
+  #     # with sigstore/fulcio when running outside of PRs.
+  #     id-token: write
+  #   steps:
+  #     - name: Checkout repository
+  #       uses: actions/checkout@v3
+  #     - name: Install Helm
+  #       run: |
+  #         curl -fsSL -o get_helm.sh https://raw.githubusercontent.com/helm/helm/master/scripts/get-helm-3
+  #         chmod 700 get_helm.sh
+  #         ./get_helm.sh
+  #     - name: Login to Helm repo
+  #       run: helm registry login ghcr.io/jsaady -u ${{ github.actor }} -p ${{ secrets.GITHUB_TOKEN }}
+      
+  #     - name: Build Helm chart
+  #       run: helm package chart
+
+  #     - name: Push Helm chart
+  #       run: helm push *.tgz oci://ghcr.io/jsaady
 
   deploy:
-    runs-on: onsite
-    environment: production
     if: github.ref == 'refs/heads/main'
+    permissions: write-all
+    runs-on: ubuntu
+    env:
+      FULL_IMAGE_TAG: ${{ needs.build.outputs.tags }}
     needs:
-      - build-and-push-image
+      - build
       - test
     steps:
     - uses: actions/checkout@v3
-    - name: Extract env vars
-      uses: jsaady/actions/extract-env-vars@main
-      env:
-        APP_SECRET_ENVIRONMENT_URL: ${{ secrets.APP_SECRET_ENVIRONMENT_URL }}
-        APP_SECRET_ENVIRONMENT_NAME: ${{ secrets.APP_SECRET_ENVIRONMENT_NAME }}
-        APP_SECRET_EMAIL_HOST: ${{ secrets.APP_SECRET_EMAIL_HOST }}
-        APP_SECRET_EMAIL_PORT: ${{ secrets.APP_SECRET_EMAIL_PORT }}
-        APP_SECRET_EMAIL_USER: ${{ secrets.APP_SECRET_EMAIL_USER }}
-        APP_SECRET_EMAIL_PASSWORD: ${{ secrets.APP_SECRET_EMAIL_PASSWORD }}
-        APP_SECRET_EMAIL_REPLY_TO: ${{ secrets.APP_SECRET_EMAIL_REPLY_TO }}
-
-    - name: Dump ENV Vars
-      run: cat ./app/app-secrets.yaml
-
-    - name: kubectl debug
-      run: kubectl cluster-info
+      with:
+        ssh-key: ${{ secrets.DEPLOY_SSH }}
+    - name: Replace old image with new image
+      run: |
+        sed -i "s|image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:.*|image: $FULL_IMAGE_TAG|Ig" ./chart/values_dev.yaml
+    - name: Push to repo
+      run: |
+        git config --global user.email "john@holyham.cloud"
+        git config --global user.name "John Saady"
+        git add ./chart/values_dev.yaml
+        git commit -m "Update image tag to $FULL_IMAGE_TAG [skip ci]"
+        git push
