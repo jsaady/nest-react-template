@@ -91,6 +91,7 @@
     "@opentelemetry/auto-instrumentations-node": "^0.56.0",
     "@opentelemetry/exporter-trace-otlp-proto": "^0.57.1",
     "@opentelemetry/sdk-node": "^0.57.1",
+    "@playwright/test": "^1.50.1",
     "@pyroscope/nodejs": "^0.4.3",
     "@simplewebauthn/server": "^8.1.1",
     "@willsoto/nestjs-prometheus": "^6.0.2",
