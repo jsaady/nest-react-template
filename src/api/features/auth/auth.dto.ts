@@ -1,4 +1,5 @@
 import { AuthenticationResponseJSON, PublicKeyCredentialCreationOptionsJSON, PublicKeyCredentialRequestOptionsJSON, RegistrationResponseJSON } from '@simplewebauthn/typescript-types';
+import { UserRole } from '../users/userRole.enum.js';
 
 export class RegisterUserDTO {
   email!: string;
@@ -15,12 +16,13 @@ export class AuthDTO {
 export interface AuthTokenContents {
   sub: number;
   clientIdentifier: string;
-  isAdmin: boolean;
+  role: UserRole;
   email: string;
   emailConfirmed: boolean;
   needPasswordReset: boolean;
   mfaEnabled: boolean;
   mfaMethod: string|null;
+  username: string;
   type: 'auth';
 }
 

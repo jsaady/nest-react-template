@@ -1,9 +1,9 @@
 import '@testing-library/jest-dom';
-import { act, fireEvent, render, cleanup } from '@testing-library/react';
+import { act, cleanup, fireEvent, render } from '@testing-library/react';
+import { withAuthorization } from '@ui/utils/useAuth.js';
 import { rest } from 'msw';
 import { setupServer } from 'msw/node';
 import { BrowserRouter } from 'react-router-dom';
-import { withAuthorization } from '../../utils/useAuth.js';
 import { UsernamePasswordForm } from './UsernamePasswordForm.js';
 jest.mock('@simplewebauthn/browser', () => ({
   startAuthentication() {
@@ -33,7 +33,7 @@ test('login screen should render', async () => {
   
       return res(ctx.json({ success: true }));
     })
-  )
+  );
   const Wrapped = withAuthorization(UsernamePasswordForm);
 
   const { findByTestId } = render(<Wrapped />, { wrapper: BrowserRouter as React.FC });
@@ -48,7 +48,6 @@ test('login screen should render', async () => {
     fireEvent.change(emailEl, { target: { value: 'test@test.com' }});
     fireEvent.change(passwordEl, { target: { value: 'password' }});
     fireEvent.click(submitEl!);
-    // console.log(emailEl, passwordEl, submitEl);
   });
   await new Promise(process.nextTick);
   await findByTestId('login-success');

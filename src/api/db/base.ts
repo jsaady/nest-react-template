@@ -1,4 +1,4 @@
-import { PrimaryKey, Property, SerializedPrimaryKey } from '@mikro-orm/core';
+import { PrimaryKey, Property } from '@mikro-orm/core';
 
 export class BaseEntity {
   @PrimaryKey({ autoincrement: true })

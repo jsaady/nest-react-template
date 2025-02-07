@@ -1,22 +1,22 @@
-import { Entity, Property } from '@mikro-orm/core';
+import { Entity, Enum, Property, Unique } from '@mikro-orm/core';
 import { BaseEntity } from '../../db/base.js';
+import { UserRole } from './userRole.enum.js';
 
 @Entity()
 export class User extends BaseEntity {
-  @Property({ nullable: true })
-  gitlabId?: string|number;
-
   @Property()
+  @Unique()
   email!: string;
 
   @Property()
+  @Unique()
   username!: string;
   
   @Property()
   password!: string;
 
-  @Property()
-  isAdmin!: boolean;
+  @Enum(() => UserRole)
+  role!: UserRole;
 
   @Property()
   needPasswordReset!: boolean;
@@ -32,4 +32,7 @@ export class User extends BaseEntity {
 
   @Property({ nullable: true, type: 'string' })
   currentWebAuthnChallenge?: string | null;
+
+  @Property({ nullable: true, type: 'datetime' })
+  lastLoginDate?: Date | null;
 }

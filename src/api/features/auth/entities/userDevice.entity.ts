@@ -1,4 +1,4 @@
-import { Entity, ManyToOne, PrimaryKey, Property } from '@mikro-orm/core';
+import { Entity, ManyToOne, PrimaryKey, Property, Uint8ArrayType } from '@mikro-orm/core';
 import { AuthenticatorDevice, AuthenticatorTransportFuture } from '@simplewebauthn/typescript-types';
 import { User } from '../../users/users.entity.js';
 
@@ -10,10 +10,10 @@ export class UserDevice implements AuthenticatorDevice {
   @Property()
   name!: string;
 
-  @Property()
+  @Property({ type: Uint8ArrayType })
   credentialPublicKey!: Uint8Array;
 
-  @Property()
+  @Property({ type: Uint8ArrayType })
   credentialID!: Uint8Array;
 
   @Property()

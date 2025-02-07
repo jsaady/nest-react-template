@@ -1,26 +1,36 @@
 import { InjectRepository } from '@mikro-orm/nestjs';
 import { EntityRepository } from '@mikro-orm/postgresql';
-import { BadRequestException, Injectable, InternalServerErrorException } from '@nestjs/common';
+import { PgBoss, ProcessQueue } from '@nestjs-enhanced/pg-boss';
+import { BadRequestException, Injectable, InternalServerErrorException, Logger } from '@nestjs/common';
+import { Job } from 'pg-boss';
 import type WebPush from 'web-push';
 import { ConfigService } from '../../utils/config/config.service.js';
 import { User } from '../users/users.entity.js';
-import { AddSubscriptionDTO, SendNotificationDTO } from './notification.dto.js';
-import { Subscription } from './subscription.entity.js';
+import { AddSubscriptionDTO, BatchNotificationDTO, SendNotificationDTO } from './notification.dto.js';
+import { Subscription } from './entities/subscription.entity.js';
 import { InjectWebPush } from './webPush.provider.js';
 
 @Injectable()
-export class NotificationService {
+export class NotificationDevicesService {
+  private logger = new Logger(NotificationDevicesService.name);
   readonly vapidPublic: string;
   readonly vapidSubject: string;
   private readonly vapidPrivate: string;
   constructor (
     private configService: ConfigService,
+    private pgBoss: PgBoss,
     @InjectWebPush() private webPush: typeof WebPush,
     @InjectRepository(Subscription) private subscriptionRepo: EntityRepository<Subscription>
   ) {
     this.vapidPublic = this.configService.getOrThrow('vapidPublic');
     this.vapidPrivate = this.configService.getOrThrow('vapidPrivate');
     this.vapidSubject = this.configService.getOrThrow('envUrl').replace('http:', 'https:');
+  }
+
+  async getDevices(userId: number) {
+    return this.subscriptionRepo.find({
+      user: { id: userId }
+    });
   }
 
   async addSubscription(userId: number, subscriptionDto: AddSubscriptionDTO) {
@@ -63,12 +73,32 @@ export class NotificationService {
           }
         });    
       } catch (e) {
-        console.error(e);
-        
-        throw new InternalServerErrorException('Error sending notification');
+        this.logger.error(`Error sending notification to user (${userId}#${sub.id})`);
+        this.logger.error(e);
+        throw e;
       }
     }
 
     return true;
+  }
+
+  async batchNotify(dto: BatchNotificationDTO) {
+    return this.pgBoss.send('process-batch-notification', dto);
+  }
+
+  @ProcessQueue('process-batch-notification')
+  async processBatchNotification(job: Job<BatchNotificationDTO>) {
+    const { title, text, userIds } = job.data;
+    this.logger.log(`Sending batch notification to ${userIds.length} users`);
+    
+    for (const userId of userIds) {
+      this.logger.log(`Sending batch notification to user (${userId})`);
+      try {
+        await this.sendNotification({ userId, title, text });
+      } catch (e) {
+        this.logger.log(`Error sending batch notification to user (${userId})`);
+        this.logger.error(e);
+      }
+    }
   }
 }

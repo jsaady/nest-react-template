@@ -6,4 +6,11 @@ export interface EnvironmentConfig {
   emailUser: string;
   emailPassword: string;
   emailReplyTo: string;
+  requireEmailVerification: boolean;
+  requireMFA: boolean;
+  stadiaMapApiKey: string;
+  allowRegistration: boolean;
+  googleCreds: string;
+  ninjaApiKey: string;
+  googleSpreadsheetId: string;
 }

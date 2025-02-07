@@ -16,20 +16,22 @@ export class ConfigService {
     }
   }
 
-  get(key: keyof typeof CONFIG_VARS) {
+  get<K extends keyof typeof CONFIG_VARS>(key: K): FullConfig[K]|void
+  get<K extends keyof typeof CONFIG_VARS>(key: K, defaultValue: FullConfig[K]): FullConfig[K]
+  get<K extends keyof typeof CONFIG_VARS>(key: K, defaultValue?: FullConfig[K]) {
     this.checkInitialized();
 
-    return this.generatedConfig![key]!;
+    return this.generatedConfig![key]! ?? defaultValue;
   }
 
 
-  getOrThrow(key: keyof typeof CONFIG_VARS) {
+  getOrThrow<K extends keyof typeof CONFIG_VARS>(key: K): FullConfig[K] {
     this.checkInitialized();
 
     if (!(key in this.generatedConfig!)) {
       throw new Error(`Config value ${key} not set`);
     }
 
-    return this.get(key);
+    return this.generatedConfig[key];
   }
 }

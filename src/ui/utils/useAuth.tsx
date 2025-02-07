@@ -4,13 +4,19 @@ import { useSearchParams } from 'react-router-dom';
 import { LoginResponse } from '../features/auth/types.js';
 import { useAsyncHttp } from './useAsync.js';
 import { useLoggedIn, withLoggedIn } from './useLoggedIn.js';
+import { useGlobalSocket } from './useSocket.js';
+import { AuthTokenContents } from '@api/features/auth/auth.dto.js';
+import { useLocalStorage } from './useLocalStorage.js';
+import { setCurrentInviteCode } from './inviteCodeStorage.js';
 
 export interface AuthState {
   loggedIn: boolean;
   clientIdentifier: string;
   loading: boolean;
-  me?: { sub: number; email: string; };
+  me?: AuthTokenContents;
+  previousUsername: string;
   setLoggedIn: (loggedIn: boolean) => void;
+  clearPreviousUsername: () => void;
   handleLoginResponse: (res: LoginResponse) => boolean;
   logout: () => void;
 }
@@ -18,11 +24,15 @@ export interface AuthState {
 const authorizationContext = createContext<AuthState>(null as any);
 
 const withAuthorizationContext = <P extends React.JSX.IntrinsicAttributes>(Component: React.FC<P>) => (props: P) => {
+
+  const [previousUsername, setPreviousUsername] = useLocalStorage('previousUsername', '');
+
   const { loggedIn, setLoggedIn } = useLoggedIn();
   let [searchParams, setSearchParams] = useSearchParams();
-  const [me, setMe] = useState<{ sub: number; email: string; }>();
+  const [me, setMe] = useState<AuthTokenContents>();
   const navigate = useNavigate();
   const { pathname } = useLocation();
+  const { reconnect: globalSocketReconnect } = useGlobalSocket() ?? { reconnect: () => {} };
 
   const clientIdentifier = useMemo(() => {
     let storedClientIdentifier = localStorage.getItem('clientIdentifier');
@@ -44,15 +54,19 @@ const withAuthorizationContext = <P extends React.JSX.IntrinsicAttributes>(Compo
         navigate('/login/verify-email');
         break;
     }
+
     setMe(data);
     setLoggedIn(success);
 
     if (success && pathname.startsWith('/login')) {
+      setPreviousUsername(data.username)
+
+      globalSocketReconnect();
       navigate('/');
     }
 
     return success;
-  }, [setLoggedIn, setMe, pathname]);
+  }, [setLoggedIn, setMe, pathname, globalSocketReconnect]);
 
   const [check, { loading }] = useAsyncHttp(async ({ get }) => {
     const response = await get<LoginResponse>('/api/auth/check');
@@ -65,9 +79,18 @@ const withAuthorizationContext = <P extends React.JSX.IntrinsicAttributes>(Compo
     setSearchParams(searchParams);
 
     await post('/api/auth/logout', {});
+    globalSocketReconnect();
 
     setLoggedIn(false);
-  }, [setLoggedIn]);
+
+    navigate('/login');
+
+    setCurrentInviteCode('');
+  }, [setLoggedIn, globalSocketReconnect]);
+
+  const clearPreviousUsername = useCallback(() => {
+    setPreviousUsername('');
+  }, []);
 
   useEffect(() => {
     check();
@@ -78,6 +101,8 @@ const withAuthorizationContext = <P extends React.JSX.IntrinsicAttributes>(Compo
       clientIdentifier,
       loading,
       loggedIn,
+      previousUsername,
+      clearPreviousUsername,
       setLoggedIn,
       logout,
       handleLoginResponse

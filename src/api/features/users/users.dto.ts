@@ -1,16 +1,16 @@
+import { OmitType } from '@nestjs/swagger';
+import { UserRole } from './userRole.enum.js';
+
 export class UserDTO {
-  gitlabId?: string|number;
+  id!: number
   username!: string;
   email!: string;
-  isAdmin!: boolean;
+  role!: UserRole;
   needPasswordReset!: boolean;
   emailConfirmed!: boolean;
+  lastLoginDate!: Date | null;
 }
 
-export class CreateUserDTO extends UserDTO {
-  password!: string;
-}
-
-export class FetchUserDTO extends UserDTO {
-  id!: number;
+export class CreateUserDTO extends OmitType(UserDTO, ['id']) {
+  password?: string;
 }

@@ -8,6 +8,7 @@ import { User } from '../users/users.entity.js';
 import { UserService } from '../users/users.service.js';
 import { UserDevice } from './entities/userDevice.entity.js';
 import { WebAuthnService } from './webAuthn.service.js';
+import { UserRole } from '../users/userRole.enum.js';
 
 jest.mock('@simplewebauthn/server', () => ({
   generateRegistrationOptions: jest.fn(),
@@ -461,19 +462,6 @@ describe('webAuthnService', () => {
         email: ''
       };
 
-
-      // insert the other fake user
-      const fakeUser = orm.em.create(User, {
-        email: 'fake2@fake.com',
-        password: 'password',
-        currentWebAuthnChallenge: null,
-        isAdmin: false,
-        emailConfirmed: false,
-        needPasswordReset: false,
-        username: 'fake2',
-      });
-
-
       // insert fake devices
       const fakeDevice = orm.em.create(UserDevice, {
         name: 'testDevice',
@@ -481,14 +469,14 @@ describe('webAuthnService', () => {
         credentialID: isoBase64URL.toBuffer('rawId' as any),
         credentialPublicKey: 'credentialPublicKey' as any,
         transports: [],
-        user: fakeUser,
+        user: orm.em.getReference(User, 2),
       });
 
       await orm.em.flush();
 
       await expect(service.removeDeviceById(fakeDevice.id, mockUser.id)).rejects.toThrowError('Device does not exist');
 
-      await orm.em.removeAndFlush([fakeDevice, fakeUser]);
+      await orm.em.removeAndFlush([fakeDevice]);
     });
   });
 });

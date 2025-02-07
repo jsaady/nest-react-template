@@ -9,7 +9,7 @@
         "id": {
           "name": "id",
           "type": "serial",
-          "unsigned": true,
+          "unsigned": false,
           "autoincrement": true,
           "primary": true,
           "nullable": false,
@@ -22,6 +22,7 @@
           "autoincrement": false,
           "primary": false,
           "nullable": false,
+          "length": 255,
           "mappedType": "string"
         },
         "cookie_secret": {
@@ -31,6 +32,7 @@
           "autoincrement": false,
           "primary": false,
           "nullable": false,
+          "length": 255,
           "mappedType": "string"
         },
         "vapid_public": {
@@ -40,6 +42,7 @@
           "autoincrement": false,
           "primary": false,
           "nullable": false,
+          "length": 255,
           "mappedType": "string"
         },
         "vapid_private": {
@@ -49,6 +52,17 @@
           "autoincrement": false,
           "primary": false,
           "nullable": false,
+          "length": 255,
+          "mappedType": "string"
+        },
+        "csrf_secret": {
+          "name": "csrf_secret",
+          "type": "varchar(255)",
+          "unsigned": false,
+          "autoincrement": false,
+          "primary": false,
+          "nullable": false,
+          "length": 255,
           "mappedType": "string"
         }
       },
@@ -61,19 +75,21 @@
             "id"
           ],
           "composite": false,
+          "constraint": true,
           "primary": true,
           "unique": true
         }
       ],
       "checks": [],
-      "foreignKeys": {}
+      "foreignKeys": {},
+      "nativeEnums": {}
     },
     {
       "columns": {
         "id": {
           "name": "id",
           "type": "serial",
-          "unsigned": true,
+          "unsigned": false,
           "autoincrement": true,
           "primary": true,
           "nullable": false,
@@ -81,32 +97,23 @@
         },
         "created_at": {
           "name": "created_at",
-          "type": "timestamptz(0)",
+          "type": "timestamptz",
           "unsigned": false,
           "autoincrement": false,
           "primary": false,
-          "nullable": false,
+          "nullable": true,
           "length": 6,
           "mappedType": "datetime"
         },
         "updated_at": {
           "name": "updated_at",
-          "type": "timestamptz(0)",
-          "unsigned": false,
-          "autoincrement": false,
-          "primary": false,
-          "nullable": false,
-          "length": 6,
-          "mappedType": "datetime"
-        },
-        "gitlab_id": {
-          "name": "gitlab_id",
-          "type": "varchar(255)",
+          "type": "timestamptz",
           "unsigned": false,
           "autoincrement": false,
           "primary": false,
           "nullable": true,
-          "mappedType": "string"
+          "length": 6,
+          "mappedType": "datetime"
         },
         "email": {
           "name": "email",
@@ -115,6 +122,7 @@
           "autoincrement": false,
           "primary": false,
           "nullable": false,
+          "length": 255,
           "mappedType": "string"
         },
         "username": {
@@ -124,6 +132,7 @@
           "autoincrement": false,
           "primary": false,
           "nullable": false,
+          "length": 255,
           "mappedType": "string"
         },
         "password": {
@@ -133,16 +142,22 @@
           "autoincrement": false,
           "primary": false,
           "nullable": false,
+          "length": 255,
           "mappedType": "string"
         },
-        "is_admin": {
-          "name": "is_admin",
-          "type": "boolean",
+        "role": {
+          "name": "role",
+          "type": "text",
           "unsigned": false,
           "autoincrement": false,
           "primary": false,
           "nullable": false,
-          "mappedType": "boolean"
+          "enumItems": [
+            "admin",
+            "user",
+            "guest"
+          ],
+          "mappedType": "enum"
         },
         "need_password_reset": {
           "name": "need_password_reset",
@@ -169,11 +184,12 @@
           "autoincrement": false,
           "primary": false,
           "nullable": true,
+          "length": 255,
           "mappedType": "string"
         },
         "email_token_date": {
           "name": "email_token_date",
-          "type": "timestamptz(0)",
+          "type": "timestamptz",
           "unsigned": false,
           "autoincrement": false,
           "primary": false,
@@ -188,31 +204,64 @@
           "autoincrement": false,
           "primary": false,
           "nullable": true,
+          "length": 255,
           "mappedType": "string"
+        },
+        "last_login_date": {
+          "name": "last_login_date",
+          "type": "timestamptz",
+          "unsigned": false,
+          "autoincrement": false,
+          "primary": false,
+          "nullable": true,
+          "length": 6,
+          "mappedType": "datetime"
         }
       },
       "name": "user",
       "schema": "public",
       "indexes": [
         {
+          "columnNames": [
+            "email"
+          ],
+          "composite": false,
+          "keyName": "user_email_unique",
+          "constraint": true,
+          "primary": false,
+          "unique": true
+        },
+        {
+          "columnNames": [
+            "username"
+          ],
+          "composite": false,
+          "keyName": "user_username_unique",
+          "constraint": true,
+          "primary": false,
+          "unique": true
+        },
+        {
           "keyName": "user_pkey",
           "columnNames": [
             "id"
           ],
           "composite": false,
+          "constraint": true,
           "primary": true,
           "unique": true
         }
       ],
       "checks": [],
-      "foreignKeys": {}
+      "foreignKeys": {},
+      "nativeEnums": {}
     },
     {
       "columns": {
         "id": {
           "name": "id",
           "type": "serial",
-          "unsigned": true,
+          "unsigned": false,
           "autoincrement": true,
           "primary": true,
           "nullable": false,
@@ -234,6 +283,7 @@
           "autoincrement": false,
           "primary": false,
           "nullable": false,
+          "length": 255,
           "mappedType": "string"
         },
         "keys": {
@@ -255,6 +305,7 @@
             "id"
           ],
           "composite": false,
+          "constraint": true,
           "primary": true,
           "unique": true
         }
@@ -273,14 +324,15 @@
           "referencedTableName": "public.user",
           "updateRule": "cascade"
         }
-      }
+      },
+      "nativeEnums": {}
     },
     {
       "columns": {
         "id": {
           "name": "id",
           "type": "serial",
-          "unsigned": true,
+          "unsigned": false,
           "autoincrement": true,
           "primary": true,
           "nullable": false,
@@ -293,6 +345,7 @@
           "autoincrement": false,
           "primary": false,
           "nullable": false,
+          "length": 255,
           "mappedType": "string"
         },
         "user_id": {
@@ -314,6 +367,7 @@
             "id"
           ],
           "composite": false,
+          "constraint": true,
           "primary": true,
           "unique": true
         }
@@ -332,14 +386,15 @@
           "referencedTableName": "public.user",
           "updateRule": "cascade"
         }
-      }
+      },
+      "nativeEnums": {}
     },
     {
       "columns": {
         "id": {
           "name": "id",
           "type": "serial",
-          "unsigned": true,
+          "unsigned": false,
           "autoincrement": true,
           "primary": true,
           "nullable": false,
@@ -352,6 +407,7 @@
           "autoincrement": false,
           "primary": false,
           "nullable": false,
+          "length": 255,
           "mappedType": "string"
         },
         "credential_public_key": {
@@ -409,6 +465,7 @@
             "id"
           ],
           "composite": false,
+          "constraint": true,
           "primary": true,
           "unique": true
         }
@@ -427,7 +484,143 @@
           "referencedTableName": "public.user",
           "updateRule": "cascade"
         }
-      }
+      },
+      "nativeEnums": {}
+    },
+    {
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "unsigned": false,
+          "autoincrement": true,
+          "primary": true,
+          "nullable": false,
+          "mappedType": "integer"
+        },
+        "invite_code": {
+          "name": "invite_code",
+          "type": "varchar(255)",
+          "unsigned": false,
+          "autoincrement": false,
+          "primary": false,
+          "nullable": false,
+          "length": 255,
+          "mappedType": "string"
+        },
+        "inviter_id": {
+          "name": "inviter_id",
+          "type": "int",
+          "unsigned": false,
+          "autoincrement": false,
+          "primary": false,
+          "nullable": true,
+          "mappedType": "integer"
+        }
+      },
+      "name": "user_invitation",
+      "schema": "public",
+      "indexes": [
+        {
+          "keyName": "user_invitation_pkey",
+          "columnNames": [
+            "id"
+          ],
+          "composite": false,
+          "constraint": true,
+          "primary": true,
+          "unique": true
+        }
+      ],
+      "checks": [],
+      "foreignKeys": {
+        "user_invitation_inviter_id_foreign": {
+          "constraintName": "user_invitation_inviter_id_foreign",
+          "columnNames": [
+            "inviter_id"
+          ],
+          "localTableName": "public.user_invitation",
+          "referencedColumnNames": [
+            "id"
+          ],
+          "referencedTableName": "public.user",
+          "deleteRule": "set null",
+          "updateRule": "cascade"
+        }
+      },
+      "nativeEnums": {}
+    },
+    {
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "unsigned": false,
+          "autoincrement": true,
+          "primary": true,
+          "nullable": false,
+          "mappedType": "integer"
+        },
+        "user_id": {
+          "name": "user_id",
+          "type": "int",
+          "unsigned": false,
+          "autoincrement": false,
+          "primary": false,
+          "nullable": false,
+          "mappedType": "integer"
+        },
+        "subscribe_to_all": {
+          "name": "subscribe_to_all",
+          "type": "boolean",
+          "unsigned": false,
+          "autoincrement": false,
+          "primary": false,
+          "nullable": false,
+          "mappedType": "boolean"
+        }
+      },
+      "name": "user_notification_preference",
+      "schema": "public",
+      "indexes": [
+        {
+          "columnNames": [
+            "user_id"
+          ],
+          "composite": false,
+          "keyName": "user_notification_preference_user_id_unique",
+          "constraint": true,
+          "primary": false,
+          "unique": true
+        },
+        {
+          "keyName": "user_notification_preference_pkey",
+          "columnNames": [
+            "id"
+          ],
+          "composite": false,
+          "constraint": true,
+          "primary": true,
+          "unique": true
+        }
+      ],
+      "checks": [],
+      "foreignKeys": {
+        "user_notification_preference_user_id_foreign": {
+          "constraintName": "user_notification_preference_user_id_foreign",
+          "columnNames": [
+            "user_id"
+          ],
+          "localTableName": "public.user_notification_preference",
+          "referencedColumnNames": [
+            "id"
+          ],
+          "referencedTableName": "public.user",
+          "updateRule": "cascade"
+        }
+      },
+      "nativeEnums": {}
     }
-  ]
+  ],
+  "nativeEnums": {}
 }

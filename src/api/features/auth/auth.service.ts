@@ -3,6 +3,7 @@ import { EntityRepository } from '@mikro-orm/postgresql';
 import { BadRequestException, Injectable, Logger, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { compare, hash } from 'bcrypt';
+import { Request } from 'express';
 import { EMAIL_VERIFICATION_EXPIRATION } from '../../utils/config/config.js';
 import { ConfigService } from '../../utils/config/config.service.js';
 import { EmailService } from '../email/email.service.js';
@@ -12,6 +13,9 @@ import { AUTH_SALT_ROUNDS, AUTH_TOKEN_EXPIRATION } from './auth.constants.js';
 import { AuthDTO, AuthLoginDTO, AuthRegisterDTO, AuthRegisterDeviceDTO, AuthStartDTO, AuthStatus, AuthTokenContents } from './auth.dto.js';
 import { UserClient } from './entities/userClient.entity.js';
 import { WebAuthnService } from './webAuthn.service.js';
+import { RequestContextService } from '@nestjs-enhanced/context';
+import { AuthenticatedRequest } from './authenticated-request.type.js';
+import { UserRole } from '../users/userRole.enum.js';
 
 @Injectable()
 export class AuthService {
@@ -21,20 +25,68 @@ export class AuthService {
     private emailService: EmailService,
     private webAuthnService: WebAuthnService,
     private config: ConfigService,
+    private ctx: RequestContextService,
     @InjectRepository(UserClient) private userClientRepo: EntityRepository<UserClient>
   ) { }
+
+
+  private extractTokenFromCookie(request: Request): AuthDTO | undefined {
+    const rawToken = request.signedCookies ? request.signedCookies['Authorization'] : request.cookies['Authorization'];
+
+    if (rawToken) {
+      const serializedToken = Buffer.from(rawToken, 'base64').toString('utf-8');
+
+      const parsedToken = JSON.parse(serializedToken);
+
+      return parsedToken;
+    }
+  }
+
+  async extractAuthDtoFromRequest (req: Request) {
+    const token = this.extractTokenFromCookie(req);
+
+    if (!token) return;
+    
+    const payload = await this.jwt.verifyAsync<AuthTokenContents>(
+      token.token,
+      {
+        secret: this.config.getOrThrow('jwtSecret')
+      }
+    );
+
+    return payload;
+  }
+
+  async extractUserIdFromRequest (req: Request) {
+    const { sub } = await this.extractAuthDtoFromRequest(req) ?? {};
+
+    return sub ? '' + sub : undefined;
+  }
+
+  private isAuthenticatedRequest(req?: Request): req is AuthenticatedRequest {
+    return !!req && 'user' in req;
+  }
+
+  getCurrentUserId() {
+    const req = this.ctx.getContext();
+
+    if (!this.isAuthenticatedRequest(req)) throw new UnauthorizedException();
+
+    return req.user.sub;
+  }
 
   async start (username: string, registerDevice?: boolean): Promise<AuthStartDTO> {
     const user = await this.userService.getUserByUsername(username);
 
     if (!user) {
       const newUser = await this.userService.create({
-        username,
+        username: username.toLowerCase(),
         email: '',
-        isAdmin: false,
+        role: UserRole.USER,
         needPasswordReset: true,
         emailConfirmed: false,
-        password: ''
+        password: '',
+        lastLoginDate: null,
       });
 
       return {
@@ -47,7 +99,7 @@ export class AuthService {
 
     if (devices === 0) {
       return {
-        status: AuthStatus.registerUser,
+        status: AuthStatus.registerDevice,
         challengeOptions: await this.webAuthnService.startWebAuthnRegistration(user.id)
       }
     }
@@ -169,8 +221,9 @@ export class AuthService {
   async mintDTOForUser(user: User, clientIdentifier: string, mfaMethod: string|null): Promise<[AuthDTO, AuthTokenContents]> {
     const contents: AuthTokenContents = {
       sub: user.id,
-      isAdmin: user.isAdmin,
+      role: user.role,
       email: user.email,
+      username: user.username,
       emailConfirmed: user.emailConfirmed,
       needPasswordReset: user.needPasswordReset,
       mfaEnabled: await this.checkUserHasMFA(user),
@@ -183,6 +236,18 @@ export class AuthService {
       refreshToken: 'NOT IMPLEMENTED',
       refreshTokenExpiresIn: 0
     }, contents];
+  }
+
+  async setLastLoginForUser(user: User) {
+    await this.userService.updateUser(user, { lastLoginDate: new Date() });
+  }
+
+  async setTempPasswordForUser(user: User, password: string) {
+    const hashedPassword = await this.hashValue(password);
+
+    const updatedUser = await this.userService.updateUser(user, { password: hashedPassword, needPasswordReset: true });
+
+    return updatedUser;
   }
 
   async checkPasswordForUser(email: string, password: string) {
@@ -292,7 +357,7 @@ export class AuthService {
   }
 
   async registerUserClientIdentifier(userId: number, clientID: string): Promise<void> {
-    const newClient = this.userClientRepo.getEntityManager().create(UserClient, { user: { id: userId }, clientID });
+    this.userClientRepo.getEntityManager().create(UserClient, { user: this.userClientRepo.getEntityManager().getReference(User, userId), clientID });
     await this.userClientRepo.getEntityManager().flush();
   }
 }

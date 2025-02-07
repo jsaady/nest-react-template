@@ -1,10 +1,15 @@
 import { ChangeEvent, FormEvent, MutableRefObject, createRef, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
-interface FormItemProps {
-  ref: MutableRefObject<HTMLInputElement | null>;
-  onChange: (value: ChangeEvent<HTMLInputElement>) => void;
+
+interface FormChangeEvent {
+  target: any;
+}
+export interface FormItemProps {
+  ref: MutableRefObject<any | null>;
+  onChange: (value: FormChangeEvent) => void;
   name: string;
   required?: boolean;
+  defaultValue?: any;
 }
 
 type FormItemPropsState<T> = Partial<Record<string&keyof T, FormItemProps>>;
@@ -31,7 +36,7 @@ const applyConstraints = (props: FormItemProps, constraints: Constraints<any, an
   }
 
   if ('pattern' in constraints) {
-    props.ref.current!.pattern = constraints.pattern!.source;
+    (props.ref.current as any)!.pattern = constraints.pattern!.source;
   }
 };
 
@@ -39,21 +44,26 @@ export const useForm = <T>(initialState?: T, { validateOnSubmit = true }: { vali
   const [state, setState] = useState<T>(initialState as unknown as T);
   const [formItemProps, setFormItemProps] = useState<FormItemPropsState<T>>({});
   const stateRef = useRef(state);
-  const setStateRef = useRef(setState);
 
   useEffect(() => {
     stateRef.current = state;
-    setStateRef.current = setState;
-  }, [state, setState]);
+  }, [state]);
+
+  const patchValue = useCallback((name: keyof T&string, value: any) => {
+    setState((s) => ({
+      ...s,
+      [name]: value
+    }));
+  }, [setState, setFormItemProps]);
 
   const register = <K extends keyof T&string>(name: K, constraints?: Constraints<T, K>) => {
     let props = formItemProps[name];
     if (!props) {
       const ref = createRef<HTMLInputElement>();
       props = {
-        onChange: (value: ChangeEvent<HTMLInputElement>) => {
+        onChange: (event: FormChangeEvent) => {
           if (constraints && typeof constraints === 'function') {
-            const error = constraints(value.target.value as any, stateRef.current);
+            const error = constraints((event.target as any).value as any, stateRef.current);
 
             if (error) {
               ref.current!.setCustomValidity(error);
@@ -61,19 +71,31 @@ export const useForm = <T>(initialState?: T, { validateOnSubmit = true }: { vali
               if (validateOnSubmit) return;
 
               ref.current!.reportValidity();
-              // return;
             } else {
               ref.current!.setCustomValidity('');
             }
           }
 
-          setState((s) => ({
-            ...s,
-            [name]: value.target.value
-          }))
+          const target = event.target as HTMLInputElement;
+          let value: any = target.value;
+
+          switch (target.type) {
+            case 'checkbox':
+              value = target.checked;
+              break;
+            case 'number':
+              value = parseFloat(value);
+              break;
+            case 'file':
+              value = target.multiple ? target.files! : target.files![0];
+              break;
+          }
+
+          patchValue(name, value);
         },
         ref,
         name,
+        defaultValue: stateRef.current?.[name],
       };
 
       if (constraints) applyConstraints(props, constraints);
@@ -84,20 +106,12 @@ export const useForm = <T>(initialState?: T, { validateOnSubmit = true }: { vali
       }));
     }
 
-    return props;
+    return props as FormItemProps;
   };
 
-  const setValue = <K extends string&keyof T>(controlName: K, value: T[K]) => {
-    setState(v => ({
-      ...v,
-      [controlName]: value
-    }));
-
-    const { ref } = getExistingFormItemProps(formItemProps, controlName);
-
-    // todo: actual target the control and update
-    ref.current!.value = value as any;
-  };
+  const setValue = useCallback(<K extends string&keyof T>(controlName: K, value: T[K]) => {
+    patchValue(controlName, value);
+  }, [patchValue, formItemProps]);
 
   const submitRef = useRef((_state: T) => {});
 
@@ -123,6 +137,7 @@ export const useForm = <T>(initialState?: T, { validateOnSubmit = true }: { vali
     register,
     setValue,
     registerForm,
-    state
+    state,
+    stateRef,
   };
 }

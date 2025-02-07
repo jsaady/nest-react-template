@@ -1,23 +1,21 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { HTTPClient, useHttp } from './http.js';
+import { AlertType, useAlert } from './alerts.js';
 
-export const useAsync = <T, A extends any[]> (cb: (...args: A) => Promise<T>, deps: any[]) => {
+export const useAsync = <T, A extends any[]> (asyncCall: (...args: A) => Promise<T>, deps: any[]) => {
   const [state, setState] = useState({
-    result: null as T,
+    result: null as null | T,
+    loading: false,
     error: null as any
   });
 
   const loadingRef = useRef(false);
-  const stateRef = useRef(state);
 
-  useEffect(() => {
-    stateRef.current = state;
-  }, [state]);
+  const cb = useCallback(asyncCall, deps);
 
   const trigger = useCallback((...args: A) => {
     (async () => {
       if (loadingRef.current) {
-        console.log('Already loading...');
         return;
       }
   
@@ -30,8 +28,7 @@ export const useAsync = <T, A extends any[]> (cb: (...args: A) => Promise<T>, de
   
       try {
         const result = await cb(...args);
-  
-        setState(s => ({
+        setState(_ => ({
           loading: false,
           result,
           error: null
@@ -44,11 +41,15 @@ export const useAsync = <T, A extends any[]> (cb: (...args: A) => Promise<T>, de
         }));
       } finally {
         loadingRef.current = false;
+        setState(s => ({
+          ...s,
+          loading: false
+        }));
       }
     })();
   }, [cb, ...deps]);
 
-  return [trigger, {...state, loading: loadingRef.current}] as const;
+  return [trigger, state] as const;
 };
 
 type Pop<T, O extends any[] = []> = T extends [infer Head, ...infer Tail] ? Tail extends [any] ? [...O, Head] : Pop<Tail, [...O, Head]> : [];
@@ -67,7 +68,9 @@ export const useAsyncHttp = <T, A extends any[]>(call: (http: AsyncHTTPClient, .
     post: (path: string, body: any) => {
       return httpClient.post(path, body, controller.signal)
     },
-    del: (path: string) => httpClient.del(path, controller.signal)
+    put: (path: string, body: any) => httpClient.put(path, body, controller.signal),
+    del: (path: string) => httpClient.del(path, controller.signal),
+    patch: (path: string, body: any) => httpClient.patch(path, body, controller.signal),
   }), [httpClient, controller]);
 
   const asyncCb = useCallback((...args: A) => {
@@ -84,3 +87,21 @@ export const useAsyncHttp = <T, A extends any[]>(call: (http: AsyncHTTPClient, .
 
   return [makeCall, state, cancel] as const;
 }
+
+export const useAsyncHttpWithAlert = <T, A extends any[]>(call: (http: AsyncHTTPClient, ...rest: A) => Promise<T>, deps: any[], successMessage: string, failMessage: string) => {
+  const alert = useAlert();
+
+  return useAsyncHttp<T, A>(async (http, ...args) => {
+    try {
+      const r = await call(http, ...args);
+  
+      alert(successMessage, AlertType.Success, 3000);
+
+      return r;
+    } catch (e) {
+      alert(failMessage, AlertType.Error, 3000);
+
+      throw e;
+    }
+  }, [...deps, alert]);
+};

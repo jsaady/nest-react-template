@@ -16,4 +16,7 @@ export class GeneratedConfig {
 
   @Property()
   vapidPrivate!: string;
+
+  @Property()
+  csrfSecret!: string;
 }
