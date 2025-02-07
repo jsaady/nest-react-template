@@ -1,30 +1,31 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { IsAuthenticatedGuard } from './isAuthenticated.guard.js';
 import { ExecutionContext, UnauthorizedException } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
+import { Test, TestingModule } from '@nestjs/testing';
+import { ConfigService } from '../../utils/config/config.service.js';
 import { AuthService } from './auth.service.js';
 import { InviteLinkService } from './inviteLink.service.js';
-import { ConfigService } from '../../utils/config/config.service.js';
+import { IsAuthenticatedGuard } from './isAuthenticated.guard.js';
+import { Mock } from 'vitest';
 
 describe('IsAuthenticatedGuard', () => {
   let guard: IsAuthenticatedGuard;
-  let mockConfigService: Partial<Record<keyof ConfigService, jest.Mock>>;
-  let mockReflector: Partial<Record<keyof Reflector, jest.Mock>>;
-  let mockAuthService: Partial<Record<keyof AuthService, jest.Mock>>;
-  let mockInviteLinkService: Partial<Record<keyof InviteLinkService, jest.Mock>>;
+  let mockConfigService: Partial<Record<keyof ConfigService, Mock>>;
+  let mockReflector: Partial<Record<keyof Reflector, Mock>>;
+  let mockAuthService: Partial<Record<keyof AuthService, Mock>>;
+  let mockInviteLinkService: Partial<Record<keyof InviteLinkService, Mock>>;
 
   beforeEach(async () => {
     mockReflector = {
-      getAllAndOverride: jest.fn(),
+      getAllAndOverride: vitest.fn(),
     };
     mockAuthService = {
-      extractAuthDtoFromRequest: jest.fn(),
+      extractAuthDtoFromRequest: vitest.fn(),
     };
     mockInviteLinkService = {
-      extractInviteCodeFromRequest: jest.fn(),
+      extractInviteCodeFromRequest: vitest.fn(),
     };
     mockConfigService = {
-      get: jest.fn().mockReturnValue(true),
+      get: vitest.fn().mockReturnValue(true),
     };
 
     const module: TestingModule = await Test.createTestingModule({

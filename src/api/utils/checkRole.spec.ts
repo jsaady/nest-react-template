@@ -1,17 +1,18 @@
+import { ExecutionContext } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { CheckRoleGuard } from './checkRole.js';
-import { ExecutionContext } from '@nestjs/common';
+import { Mock } from 'vitest';
 
 describe('CheckRoleGuard', () => {
   let guard: CheckRoleGuard;
-  let reflector: Record<keyof Reflector, jest.Mock<any, any, any>>;
+  let reflector: Record<keyof Reflector, Mock<any, any, any>>;
 
   beforeEach(() => {
     reflector = {
-      getAllAndMerge: jest.fn(),
-      get: jest.fn(),
-      getAll: jest.fn(),
-      getAllAndOverride: jest.fn(),
+      getAllAndMerge: vitest.fn(),
+      get: vitest.fn(),
+      getAll: vitest.fn(),
+      getAllAndOverride: vitest.fn(),
     };
     guard = new CheckRoleGuard(reflector as Reflector);
   });

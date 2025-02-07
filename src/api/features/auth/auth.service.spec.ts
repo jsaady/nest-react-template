@@ -1,4 +1,5 @@
 import { MikroORM } from '@mikro-orm/core';
+import { RequestContextService } from '@nestjs-enhanced/context';
 import { Logger } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { Test, TestingModule } from '@nestjs/testing';
@@ -6,18 +7,18 @@ import { compare, hash } from 'bcrypt';
 import { MockConfigModule } from '../../testFixtures/config.mock.js';
 import { CreateMikroORM } from '../../testFixtures/mikroOrm.mock.js';
 import { EmailService } from '../email/email.service.js';
+import { UserRole } from '../users/userRole.enum.js';
 import { User } from '../users/users.entity.js';
 import { UserService } from '../users/users.service.js';
 import { AUTH_SALT_ROUNDS } from './auth.constants.js';
 import { AuthService } from './auth.service.js';
 import { UserClient } from './entities/userClient.entity.js';
 import { WebAuthnService } from './webAuthn.service.js';
-import { UserRole } from '../users/userRole.enum.js';
-import { RequestContextService } from '@nestjs-enhanced/context';
+import { Mock } from 'vitest';
 
-jest.mock('bcrypt', () => ({
-  hash: jest.fn().mockResolvedValue('test'),
-  compare: jest.fn(),
+vitest.mock('bcrypt', () => ({
+  hash: vitest.fn().mockResolvedValue('test'),
+  compare: vitest.fn(),
 }));
 
 
@@ -26,35 +27,35 @@ describe('AuthService', () => {
   let module: TestingModule;
   let orm: MikroORM;
 
-  const mockEmailService: Record<keyof EmailService, jest.Mock> = {
-    sendEmail: jest.fn(),
+  const mockEmailService: Record<keyof EmailService, Mock> = {
+    sendEmail: vitest.fn(),
   };
-  const mockUserService: Record<keyof UserService, jest.Mock> = {
-    getUserById: jest.fn(),
-    create: jest.fn(),
-    getUserByEmail: jest.fn(),
-    getUserByUsername: jest.fn(),
-    updateUser: jest.fn(),
+  const mockUserService: Record<keyof UserService, Mock> = {
+    getUserById: vitest.fn(),
+    create: vitest.fn(),
+    getUserByEmail: vitest.fn(),
+    getUserByUsername: vitest.fn(),
+    updateUser: vitest.fn(),
   };
-  const mockWebAuthnService: Record<keyof WebAuthnService, jest.Mock> = {
-    getDeviceCountByUserId: jest.fn(),
-    getDevicesByUserId: jest.fn(),
-    removeDeviceById: jest.fn(),
-    startWebAuthnRegistration: jest.fn(),
-    verifyWebAuthnRegistration: jest.fn(),
-    startWebAuthn: jest.fn(),
-    verifyWebAuthn: jest.fn(),
+  const mockWebAuthnService: Record<keyof WebAuthnService, Mock> = {
+    getDeviceCountByUserId: vitest.fn(),
+    getDevicesByUserId: vitest.fn(),
+    removeDeviceById: vitest.fn(),
+    startWebAuthnRegistration: vitest.fn(),
+    verifyWebAuthnRegistration: vitest.fn(),
+    startWebAuthn: vitest.fn(),
+    verifyWebAuthn: vitest.fn(),
   };
-  const mockJwtService: Record<keyof JwtService, jest.Mock> = {
-    signAsync: jest.fn(),
-    sign: jest.fn(),
-    verifyAsync: jest.fn(),
-    verify: jest.fn(),
-    decode: jest.fn(),
+  const mockJwtService: Record<keyof JwtService, Mock> = {
+    signAsync: vitest.fn(),
+    sign: vitest.fn(),
+    verifyAsync: vitest.fn(),
+    verify: vitest.fn(),
+    decode: vitest.fn(),
   };
-  const mockRequestContextService: Record<keyof RequestContextService, jest.Mock> = {
-    start: jest.fn(),
-    getContext: jest.fn()
+  const mockRequestContextService: Record<keyof RequestContextService, Mock> = {
+    start: vitest.fn(),
+    getContext: vitest.fn()
   }
   beforeAll(async () => {
     module = await Test.createTestingModule({
@@ -92,7 +93,7 @@ describe('AuthService', () => {
   });
 
   afterEach(() => {
-    jest.resetAllMocks();
+    vitest.resetAllMocks();
     return orm.em.nativeDelete(UserClient, {});
   });
 
@@ -264,7 +265,7 @@ describe('AuthService', () => {
         password: 'test',
       });
 
-      jest.spyOn(service, 'compareValue' as any).mockResolvedValueOnce(false);
+      vitest.spyOn(service, 'compareValue' as any).mockResolvedValueOnce(false);
 
       expect(service.continueDeviceRegistration({ username: 'test', response: ({ } as any), deviceName: 'test', password: 'test2', clientIdentifier: '' })).rejects.toThrow('Incorrect password');
     });
@@ -281,7 +282,7 @@ describe('AuthService', () => {
         user: null,
       });
 
-      jest.spyOn(service, 'compareValue' as any).mockResolvedValueOnce(true);
+      vitest.spyOn(service, 'compareValue' as any).mockResolvedValueOnce(true);
 
       expect(service.continueDeviceRegistration({ username: 'test', response: ({ } as any), deviceName: 'test', password: 'test', clientIdentifier: '' })).rejects.toThrow('Invalid credentials');
     });
@@ -363,7 +364,7 @@ describe('AuthService', () => {
   describe('initiateEmailVerification', () => {
     it('should be able to initiate email verification with a user argument', async () => {
       mockEmailService.sendEmail.mockResolvedValueOnce(null);
-      (hash as jest.Mock).mockResolvedValueOnce('test');
+      (hash as Mock).mockResolvedValueOnce('test');
 
       const user = {
         id: 1,
@@ -464,7 +465,7 @@ describe('AuthService', () => {
 
       mockUserService.updateUser.mockResolvedValueOnce({ });
 
-      jest.spyOn(service, 'compareValue' as any).mockResolvedValueOnce(true);
+      vitest.spyOn(service, 'compareValue' as any).mockResolvedValueOnce(true);
 
       await expect(service.validateEmailToken(1, 'test')).resolves.toEqual({});
       expect(mockUserService.getUserById).toHaveBeenCalledWith(1);
@@ -506,7 +507,7 @@ describe('AuthService', () => {
         emailTokenDate: new Date(),
       });
 
-      jest.spyOn(service, 'compareValue' as any).mockResolvedValueOnce(false);
+      vitest.spyOn(service, 'compareValue' as any).mockResolvedValueOnce(false);
 
       await expect(service.validateEmailToken(1, 'test')).rejects.toThrow('Incorrect token');
     });
@@ -557,7 +558,7 @@ describe('AuthService', () => {
       } as User;
       mockUserService.getUserByEmail.mockReturnValue(user);
 
-      jest.spyOn(service, 'compareValue' as any).mockResolvedValueOnce(true);
+      vitest.spyOn(service, 'compareValue' as any).mockResolvedValueOnce(true);
 
       const result = await service.checkPasswordForUser(user.email, 'test');
 
@@ -566,7 +567,7 @@ describe('AuthService', () => {
 
     it('should handle if the user does not exist', async () => {
       mockUserService.getUserByEmail.mockReturnValue(null);
-      jest.spyOn(service, 'compareValue' as any).mockResolvedValueOnce(true);
+      vitest.spyOn(service, 'compareValue' as any).mockResolvedValueOnce(true);
 
       await expect(service.checkPasswordForUser('test@test.com', '')).rejects.toThrow('Incorrect email or password');
       expect(service['compareValue']).not.toHaveBeenCalled();
@@ -581,7 +582,7 @@ describe('AuthService', () => {
   
       mockUserService.getUserByEmail.mockReturnValue(user);
   
-      jest.spyOn(service, 'compareValue' as any).mockResolvedValueOnce(false);
+      vitest.spyOn(service, 'compareValue' as any).mockResolvedValueOnce(false);
 
       await expect(service.checkPasswordForUser('test@test.com', '')).rejects.toThrow('Incorrect email or password');
       expect(service['compareValue']).toHaveBeenCalled();
@@ -617,7 +618,7 @@ describe('AuthService', () => {
 
   describe('compareValue', () => {
     it('should call bcrypt', async () => {
-      (compare as jest.Mock).mockResolvedValueOnce(true);
+      (compare as Mock).mockResolvedValueOnce(true);
 
       await service['compareValue']('test', 'test');
 
@@ -627,7 +628,7 @@ describe('AuthService', () => {
 
   describe('hashValue', () => {
     it('should call bcrypt', async () => {
-      (hash as jest.Mock).mockResolvedValueOnce(true);
+      (hash as Mock).mockResolvedValueOnce(true);
 
       await service['hashValue']('test');
 
@@ -643,8 +644,8 @@ describe('AuthService', () => {
         email: 'test@test.com',
       };
 
-      jest.spyOn(service, 'checkPasswordForUser' as any).mockResolvedValueOnce(user);
-      jest.spyOn(service, 'hashValue' as any).mockResolvedValueOnce('hashed');
+      vitest.spyOn(service, 'checkPasswordForUser' as any).mockResolvedValueOnce(user);
+      vitest.spyOn(service, 'hashValue' as any).mockResolvedValueOnce('hashed');
       mockUserService.updateUser.mockResolvedValueOnce(user);
 
       await expect(service.updatePasswordForUser(user.email, 'test', 'test')).resolves.toBe(user);
@@ -667,7 +668,7 @@ describe('AuthService', () => {
       mockUserService.getUserByEmail.mockResolvedValueOnce(user);
       mockEmailService.sendEmail.mockResolvedValueOnce(null);
 
-      jest.spyOn(service, 'generateResetPasswordToken' as any).mockResolvedValueOnce('token');
+      vitest.spyOn(service, 'generateResetPasswordToken' as any).mockResolvedValueOnce('token');
 
       await expect(service.sendResetPasswordEmail(user.email)).resolves.toBeUndefined();
 
@@ -678,11 +679,11 @@ describe('AuthService', () => {
     it('should handle if the user does not exist', async () => {
       mockUserService.getUserByEmail.mockResolvedValueOnce(null);
 
-      jest.spyOn(Logger, 'log');
+      vitest.spyOn(Logger, 'log');
 
       await expect(service.sendResetPasswordEmail('test@test.com')).resolves.toBeUndefined();
 
-      const [message] = (Logger.log as jest.Mock).mock.calls[0];
+      const [message] = (Logger.log as Mock).mock.calls[0];
 
       expect(message).toMatch('test@test.com');
     });
@@ -735,9 +736,9 @@ describe('AuthService', () => {
         email: 'test@test.com',
       };
 
-      jest.spyOn(service, 'validatePasswordResetToken' as any).mockResolvedValueOnce('test@test.com');
+      vitest.spyOn(service, 'validatePasswordResetToken' as any).mockResolvedValueOnce('test@test.com');
       mockUserService.getUserByEmail.mockResolvedValueOnce(user);
-      jest.spyOn(service, 'hashValue' as any).mockResolvedValueOnce('hashed');
+      vitest.spyOn(service, 'hashValue' as any).mockResolvedValueOnce('hashed');
       mockUserService.updateUser.mockResolvedValueOnce(user);
 
       await expect(service.resetPasswordForUser('test', 'test')).resolves.toBe(user);
@@ -749,7 +750,7 @@ describe('AuthService', () => {
     });
 
     it('should handle if the user does not exist', async () => {
-      jest.spyOn(service, 'validatePasswordResetToken' as any).mockResolvedValueOnce('test@test.com');
+      vitest.spyOn(service, 'validatePasswordResetToken' as any).mockResolvedValueOnce('test@test.com');
       mockUserService.getUserByEmail.mockResolvedValueOnce(null);
 
       await expect(service.resetPasswordForUser('test', 'test')).rejects.toThrow('User not found');
@@ -758,7 +759,7 @@ describe('AuthService', () => {
 
   describe('loginUser', () => {
     it('should login a user', async () => {
-      jest.spyOn(service, 'checkPasswordForUser' as any).mockResolvedValueOnce({});
+      vitest.spyOn(service, 'checkPasswordForUser' as any).mockResolvedValueOnce({});
       await service.loginUser('', '');
 
       expect(service['checkPasswordForUser']).toHaveBeenCalled();

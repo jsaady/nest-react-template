@@ -1,5 +1,4 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { Transporter } from 'nodemailer';
 import { MockConfigModule } from '../../testFixtures/config.mock.js';
 import { EmailService } from './email.service.js';
 import { NODE_MAILER_PROVIDER } from './nodeMailer.provider.js';
@@ -8,7 +7,7 @@ describe('EmailService', () => {
   let service: EmailService;
   let module: TestingModule;
   const transport = {
-    sendMail: jest.fn().mockImplementation((_: any, callback: Function) => {
+    sendMail: vitest.fn().mockImplementation((_: any, callback: Function) => {
       callback(null, { messageId: '123' });
     })
   };

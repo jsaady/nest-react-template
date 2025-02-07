@@ -40,6 +40,9 @@ jobs:
     container:
       image: node:20
     steps:
+    - uses: n1hility/cancel-previous-runs@v3
+      with: 
+        token: ${{ secrets.GITHUB_TOKEN }}
     - name: Checkout repo
       uses: actions/checkout@v3
     - name: Install
@@ -67,7 +70,9 @@ jobs:
       tags: ${{ steps.meta.outputs.tags }}
 
     steps:
-
+      - uses: n1hility/cancel-previous-runs@v3
+        with: 
+          token: ${{ secrets.GITHUB_TOKEN }}
       - name: Checkout repository
         uses: actions/checkout@v3
 

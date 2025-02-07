@@ -1,18 +1,19 @@
+import { EntityManager } from '@mikro-orm/core';
 import { getRepositoryToken } from '@mikro-orm/nestjs';
-import { IS_MIGRATED } from '../../db/migration.provider.js';
-import { GeneratedConfigService } from './generated-config.service.js';
-import { GeneratedConfig } from './generated-config.entity.js';
 import { ConfigService } from '@nestjs/config';
 import { Test } from '@nestjs/testing';
-import { EntityManager } from '@mikro-orm/core';
+import { IS_MIGRATED } from '../../db/migration.provider.js';
+import { GeneratedConfig } from './generated-config.entity.js';
+import { GeneratedConfigService } from './generated-config.service.js';
+import { Mock } from 'vitest';
 
 describe('GeneratedConfigService', () => {
   let service: GeneratedConfigService;
-  const mockEm: Partial<Record<keyof EntityManager, jest.Mock>> = {
-    findOne: jest.fn(),
-    create: jest.fn(),
-    persistAndFlush: jest.fn(),
-    fork: jest.fn().mockImplementation(() => mockEm)
+  const mockEm: Partial<Record<keyof EntityManager, Mock>> = {
+    findOne: vitest.fn(),
+    create: vitest.fn(),
+    persistAndFlush: vitest.fn(),
+    fork: vitest.fn().mockImplementation(() => mockEm)
   };
   beforeEach(async () => {
 
@@ -27,17 +28,17 @@ describe('GeneratedConfigService', () => {
         {
           provide: getRepositoryToken(GeneratedConfig),
           useValue: {
-            findOne: jest.fn(),
-            create: jest.fn(),
-            persistAndFlush: jest.fn(),
-            getEntityManager: jest.fn().mockReturnValue(mockEm),
+            findOne: vitest.fn(),
+            create: vitest.fn(),
+            persistAndFlush: vitest.fn(),
+            getEntityManager: vitest.fn().mockReturnValue(mockEm),
           },
         },
         {
           provide: ConfigService,
           useValue: {
-            getOrThrow: jest.fn(),
-            get: jest.fn(),
+            getOrThrow: vitest.fn(),
+            get: vitest.fn(),
           },
         },
       ],

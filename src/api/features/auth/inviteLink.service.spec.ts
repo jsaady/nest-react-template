@@ -1,29 +1,30 @@
 import { EntityManager } from '@mikro-orm/postgresql';
+import { Request } from 'express';
+import { ConfigService } from '../../utils/config/config.service.js';
 import { AuthService } from './auth.service.js';
 import { InviteLinkService } from './inviteLink.service.js';
-import { ConfigService } from '../../utils/config/config.service.js';
-import { Request } from 'express';
+import { Mock } from 'vitest';
 
 
 
 describe('InviteLinkService', () => {
   let inviteLinkService: InviteLinkService;
-  let authService: Partial<Record<keyof AuthService, jest.Mock<any, any, any>>>;
-  let em: Partial<Record<keyof EntityManager, jest.Mock<any, any, any>>>;
-  let config: Partial<Record<keyof ConfigService, jest.Mock<any, any, any>>>;
+  let authService: Partial<Record<keyof AuthService, Mock<any, any, any>>>;
+  let em: Partial<Record<keyof EntityManager, Mock<any, any, any>>>;
+  let config: Partial<Record<keyof ConfigService, Mock<any, any, any>>>;
 
   beforeEach(() => {
     authService = {
-      getCurrentUserId: jest.fn().mockReturnValue(1),
+      getCurrentUserId: vitest.fn().mockReturnValue(1),
     };
     em = {
-      findOne: jest.fn(),
-      persistAndFlush: jest.fn(),
-      getReference: jest.fn(),
-      create: jest.fn().mockImplementation((_, data) => data),
+      findOne: vitest.fn(),
+      persistAndFlush: vitest.fn(),
+      getReference: vitest.fn(),
+      create: vitest.fn().mockImplementation((_, data) => data),
     };
     config = {
-      get: jest.fn().mockReturnValue('http://localhost:3000'),
+      get: vitest.fn().mockReturnValue('http://localhost:3000'),
     };
     inviteLinkService = new InviteLinkService(authService as unknown as AuthService, em as unknown as EntityManager, config as unknown as ConfigService);
   });

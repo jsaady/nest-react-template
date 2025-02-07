@@ -9,7 +9,6 @@ export function getTestMikroOrmConfig (): Options {
         allowGlobalContext: true,
         namingStrategy: UnderscoreNamingStrategy,
         entities: ['./**/*.entity.js'],
-        entitiesTs: ['./**/*.entity.ts'],
         migrations: {
             disableForeignKeys: false,
             path: './dist/api/db/migrations',

@@ -8,13 +8,13 @@ import { User } from '../users/users.entity.js';
 import { UserService } from '../users/users.service.js';
 import { UserDevice } from './entities/userDevice.entity.js';
 import { WebAuthnService } from './webAuthn.service.js';
+import { Mock } from 'vitest';
 import { UserRole } from '../users/userRole.enum.js';
-
-jest.mock('@simplewebauthn/server', () => ({
-  generateRegistrationOptions: jest.fn(),
-  verifyRegistrationResponse: jest.fn(),
-  generateAuthenticationOptions: jest.fn(),
-  verifyAuthenticationResponse: jest.fn(),
+vitest.mock('@simplewebauthn/server', () => ({
+  generateRegistrationOptions: vitest.fn(),
+  verifyRegistrationResponse: vitest.fn(),
+  generateAuthenticationOptions: vitest.fn(),
+  verifyAuthenticationResponse: vitest.fn(),
 }));
 
 describe('webAuthnService', () => {
@@ -36,14 +36,15 @@ describe('webAuthnService', () => {
 
     service = module.get<WebAuthnService>(WebAuthnService);
     orm = module.get<MikroORM>(MikroORM);
-  });
 
-  afterAll(async () => {
-    await module?.close();
+
+    return async () => {
+      await module?.close();
+    };
   });
 
   afterEach(async () => {
-    jest.resetAllMocks();
+    vitest.resetAllMocks();
     await orm.em.nativeDelete(UserDevice, {});
   });
 
@@ -67,12 +68,12 @@ describe('webAuthnService', () => {
         user: mockUser as any,
       }];
 
-      jest.spyOn(service, 'getDeviceCountByUserId').mockResolvedValueOnce(mockDeviceCount);
-      jest.spyOn(service, 'getDevicesByUserId').mockResolvedValueOnce(mockDevices);
+      vitest.spyOn(service, 'getDeviceCountByUserId').mockResolvedValueOnce(mockDeviceCount);
+      vitest.spyOn(service, 'getDevicesByUserId').mockResolvedValueOnce(mockDevices);
       const mockChallenge = 'mockChallenge';
 
 
-      (generateRegistrationOptions as jest.Mock).mockReturnValueOnce({
+      (generateRegistrationOptions as Mock).mockReturnValueOnce({
         challenge: mockChallenge
       });
 
@@ -80,7 +81,7 @@ describe('webAuthnService', () => {
 
       expect(generateRegistrationOptions).toHaveBeenCalledTimes(1);
 
-      const [opts] = (generateRegistrationOptions as jest.Mock).mock.calls[0];
+      const [opts] = (generateRegistrationOptions as Mock).mock.calls[0];
 
       expect(opts).toMatchObject({
         rpName: expect.any(String),
@@ -142,8 +143,8 @@ describe('webAuthnService', () => {
 
       const mockDevices: UserDevice[] = [];
 
-      jest.spyOn(service, 'getDeviceCountByUserId').mockResolvedValueOnce(mockDeviceCount);
-      jest.spyOn(service, 'getDevicesByUserId').mockResolvedValueOnce(mockDevices);
+      vitest.spyOn(service, 'getDeviceCountByUserId').mockResolvedValueOnce(mockDeviceCount);
+      vitest.spyOn(service, 'getDevicesByUserId').mockResolvedValueOnce(mockDevices);
 
       const user = await orm.em.findOneOrFail(User, {
         id: mockUser.id
@@ -151,7 +152,7 @@ describe('webAuthnService', () => {
       user.currentWebAuthnChallenge = 'challenge';
       await orm.em.flush();
 
-      (verifyRegistrationResponse as jest.Mock).mockRejectedValueOnce(new Error('test'));
+      (verifyRegistrationResponse as Mock).mockRejectedValueOnce(new Error('test'));
 
       const deviceName = 'testDevice';
 
@@ -191,7 +192,7 @@ describe('webAuthnService', () => {
       user.currentWebAuthnChallenge = 'challenge';
       await orm.em.flush();
 
-      (verifyRegistrationResponse as jest.Mock).mockResolvedValueOnce(mockVerification);
+      (verifyRegistrationResponse as Mock).mockResolvedValueOnce(mockVerification);
 
       await service.verifyWebAuthnRegistration(mockUser.id, deviceName, {
         id: 'id',
@@ -241,12 +242,12 @@ describe('webAuthnService', () => {
         user: mockUser as any,
       }];
 
-      jest.spyOn(service, 'getDeviceCountByUserId').mockResolvedValueOnce(mockDeviceCount);
-      jest.spyOn(service, 'getDevicesByUserId').mockResolvedValueOnce(mockDevices);
+      vitest.spyOn(service, 'getDeviceCountByUserId').mockResolvedValueOnce(mockDeviceCount);
+      vitest.spyOn(service, 'getDevicesByUserId').mockResolvedValueOnce(mockDevices);
       const mockChallenge = 'mockChallenge';
 
 
-      (generateAuthenticationOptions as jest.Mock).mockReturnValueOnce({
+      (generateAuthenticationOptions as Mock).mockReturnValueOnce({
         challenge: mockChallenge
       });
 
@@ -254,7 +255,7 @@ describe('webAuthnService', () => {
 
       expect(generateAuthenticationOptions).toHaveBeenCalledTimes(1);
 
-      const [opts] = (generateAuthenticationOptions as jest.Mock).mock.calls[0];
+      const [opts] = (generateAuthenticationOptions as Mock).mock.calls[0];
 
       expect(opts).toMatchObject({
         timeout: expect.any(Number),
@@ -329,7 +330,7 @@ describe('webAuthnService', () => {
       user.currentWebAuthnChallenge = 'challenge';
       await orm.em.flush();
 
-      (verifyAuthenticationResponse as jest.Mock).mockRejectedValueOnce(new Error('test'));
+      (verifyAuthenticationResponse as Mock).mockRejectedValueOnce(new Error('test'));
 
       await expect(service.verifyWebAuthn(mockUser.id, {
         id: 'id',
@@ -359,7 +360,7 @@ describe('webAuthnService', () => {
           newCounter: 1,
         } as any,
       };
-      (verifyAuthenticationResponse as jest.Mock).mockResolvedValueOnce(mockVerification);
+      (verifyAuthenticationResponse as Mock).mockResolvedValueOnce(mockVerification);
 
       // mock the device by user
       orm.em.create(UserDevice, {
@@ -406,7 +407,7 @@ describe('webAuthnService', () => {
 
       const mockDeviceCount = 0;
 
-      jest.spyOn(service['userDeviceRepo'], 'count').mockResolvedValueOnce(mockDeviceCount);
+      vitest.spyOn(service['userDeviceRepo'], 'count').mockResolvedValueOnce(mockDeviceCount);
 
       const result = service.getDeviceCountByUserId(mockUser.id);
 
@@ -462,21 +463,28 @@ describe('webAuthnService', () => {
         email: ''
       };
 
+      const extraUserId = await orm.em.insert(User, {
+        email: 'test_webauth2@test.com',
+        username: 'test_webauth2',
+        role: UserRole.ADMIN,
+        password: '',
+        needPasswordReset: false,
+        emailConfirmed: true
+      });      
       // insert fake devices
-      const fakeDevice = orm.em.create(UserDevice, {
+      const fakeDevice = await orm.em.insert(UserDevice, {
         name: 'testDevice',
         counter: 0,
         credentialID: isoBase64URL.toBuffer('rawId' as any),
         credentialPublicKey: 'credentialPublicKey' as any,
         transports: [],
-        user: orm.em.getReference(User, 2),
+        user: orm.em.getReference(User, extraUserId),
       });
 
-      await orm.em.flush();
+      await expect(service.removeDeviceById(fakeDevice, mockUser.id)).rejects.toThrowError('Device does not exist');
 
-      await expect(service.removeDeviceById(fakeDevice.id, mockUser.id)).rejects.toThrowError('Device does not exist');
-
-      await orm.em.removeAndFlush([fakeDevice]);
+      await orm.em.nativeDelete(UserDevice, { id: fakeDevice });
+      await orm.em.nativeDelete(User, { id: extraUserId });
     });
   });
 });

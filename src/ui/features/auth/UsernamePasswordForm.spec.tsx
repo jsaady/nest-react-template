@@ -5,7 +5,7 @@ import { rest } from 'msw';
 import { setupServer } from 'msw/node';
 import { BrowserRouter } from 'react-router-dom';
 import { UsernamePasswordForm } from './UsernamePasswordForm.js';
-jest.mock('@simplewebauthn/browser', () => ({
+vitest.mock('@simplewebauthn/browser', () => ({
   startAuthentication() {
     return {};
   }

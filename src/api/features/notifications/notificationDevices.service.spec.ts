@@ -1,24 +1,28 @@
 import { MikroORM } from '@mikro-orm/core';
 import { Test, TestingModule } from '@nestjs/testing';
+import PgBoss, { Job } from 'pg-boss';
 import { MockConfigModule } from '../../testFixtures/config.mock.js';
 import { CreateMikroORM } from '../../testFixtures/mikroOrm.mock.js';
 import { GeneratedConfig } from '../../utils/config/generated-config.entity.js';
 import { User } from '../users/users.entity.js';
+import { Subscription } from './entities/subscription.entity.js';
 import { AddSubscriptionDTO, BatchNotificationDTO, SendNotificationDTO } from './notification.dto.js';
 import { NotificationDevicesService } from './notificationDevices.service.js';
-import { Subscription } from './entities/subscription.entity.js';
-import PgBoss, { Job } from 'pg-boss';
 import { UserRole } from '../users/userRole.enum.js';
+const extraUserId = 200;
+const extraUserId2 = 400;
 
 describe('NotificationDevicesService', () => {
   let service: NotificationDevicesService;
   let module: TestingModule;
   let mikroOrm: MikroORM;
+  let extraUserId: number;
+  let extraUserId2: number;
   const mockWebPush = {
-    sendNotification: jest.fn(),
+    sendNotification: vitest.fn(),
   };
   const mockPgBoss = {
-    send: jest.fn(),
+    send: vitest.fn(),
   };
 
   beforeAll(async () => {
@@ -39,18 +43,40 @@ describe('NotificationDevicesService', () => {
 
     service = module.get<NotificationDevicesService>(NotificationDevicesService);
     mikroOrm = module.get<MikroORM>(MikroORM);
+    extraUserId = await mikroOrm.em.insert(User, {
+      email: 'test_not1@test.com',
+      username: 'test_not1',
+      role: UserRole.ADMIN,
+      password: '',
+      needPasswordReset: false,
+      emailConfirmed: true
+    });
+    extraUserId2 = await mikroOrm.em.insert(User, {
+      email: 'test_not2@test.com',
+      username: 'test_not2',
+      role: UserRole.ADMIN,
+      password: '',
+      needPasswordReset: false,
+      emailConfirmed: true
+    });
+
+    return async () => {
+      await mikroOrm.em.nativeDelete(Subscription, {});
+      await mikroOrm.em.nativeDelete(User, {
+        id: extraUserId
+      });
+      await mikroOrm.em.nativeDelete(User, {
+        id: extraUserId2
+      });
+      await module?.close();
+    };
   });
 
   afterEach(async () => {
-    jest.resetAllMocks();
+    vitest.resetAllMocks();
     await mikroOrm.em.nativeDelete(Subscription, {
       user: { id: 1 },
     });
-  });
-
-  afterAll(async () => {
-    await mikroOrm.em.nativeDelete(Subscription, {});
-    await module?.close();
   });
 
   describe('getDevices', () => {
@@ -82,7 +108,6 @@ describe('NotificationDevicesService', () => {
 
       expect(subscription).toBeDefined();
       expect(subscription.id).toBeDefined();
-      expect(subscription.user).toBeInstanceOf(User);
       expect(subscription.user.id).toBe(userId);
       expect(subscription.endpoint).toBe(subscriptionDto.endpoint);
       expect(subscription.keys).toEqual(subscriptionDto.keys);
@@ -166,7 +191,7 @@ describe('NotificationDevicesService', () => {
       const dto = {
         title: 'Test Notification',
         text: 'Hello, world!',
-        userIds: [1, 2, 3],
+        userIds: [1, extraUserId, extraUserId2],
       };
 
       service.batchNotify(dto);
@@ -180,7 +205,7 @@ describe('NotificationDevicesService', () => {
       const dto = {
         title: 'Test Notification',
         text: 'Hello, world!',
-        userIds: [1, 2, 3],
+        userIds: [1, extraUserId, extraUserId2],
       };
 
       const subscriptionDto: AddSubscriptionDTO = {

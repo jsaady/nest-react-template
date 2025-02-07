@@ -6,8 +6,9 @@ import { CreateUserDTO } from './users.dto.js';
 import { User } from './users.entity.js';
 import { UserService } from './users.service.js';
 import { UserRole } from './userRole.enum.js';
+import { EntityManager } from '@mikro-orm/postgresql';
 
-const generateMockUser = (email = 'test@test.com', password = '', username = 'test'): CreateUserDTO => ({
+const generateMockUser = (email = 'test@test.com', username = 'test', password = ''): CreateUserDTO => ({
   email,
   password,
   username,
@@ -20,7 +21,7 @@ const generateMockUser = (email = 'test@test.com', password = '', username = 'te
 describe('UserService', () => {
   let module: TestingModule;
   let service: UserService;
-  let orm: MikroORM;
+  let em: EntityManager;
 
 
   beforeAll(async () => {
@@ -35,7 +36,7 @@ describe('UserService', () => {
     }).compile();
 
     service = module.get<UserService>(UserService);
-    orm = module.get<MikroORM>(MikroORM);
+    em = module.get<EntityManager>(EntityManager);
   });
 
   afterAll(async () => {
@@ -43,7 +44,7 @@ describe('UserService', () => {
   });
 
   afterEach(() => {
-    return orm.em.nativeDelete(User, {
+    return em.nativeDelete(User, {
       id: {
         $gt: 3,
       }
@@ -52,25 +53,25 @@ describe('UserService', () => {
 
   describe('create', () => {
     it('should create a user', async () => {
-      const user = await service.create(generateMockUser());
+      const user = await service.create(generateMockUser('test1@test.com', 'test1'));
 
       expect(user).toMatchObject({
-        email: 'test@test.com',
+        email: 'test1@test.com',
         password: '',
       });
 
-      const userFromDb = await orm.em.findOne(User, user.id);
+      const userFromDb = await em.findOne(User, user.id);
       expect(userFromDb).toMatchObject({
-        email: 'test@test.com',
+        email: 'test1@test.com',
         password: '',
       });
     });
 
     it('should hash the password', async () => {
-      const user = await service.create(generateMockUser());
+      const user = await service.create(generateMockUser('test2@test.com', 'test2'));
 
       expect(user).toMatchObject({
-        email: 'test@test.com',
+        email: 'test2@test.com',
         password: expect.not.stringMatching('test'),
       });
     });
@@ -78,17 +79,17 @@ describe('UserService', () => {
 
   describe('findByEmail', () => {
     it('should find a user by email', async () => {
-      const user = await service.create(generateMockUser());
+      const user = await service.create(generateMockUser('test3@test.com', 'test3'));
 
       const foundUser = await service.getUserByEmail(user.email);
       expect(foundUser).toMatchObject({
-        email: 'test@test.com',
+        email: 'test3@test.com',
         password: '',
       });
 
-      const userFromDb = await orm.em.findOne(User, user.id);
+      const userFromDb = await em.findOne(User, user.id);
       expect(userFromDb).toMatchObject({
-        email: 'test@test.com',
+        email: 'test3@test.com',
         password: '',
       });
 
@@ -96,7 +97,7 @@ describe('UserService', () => {
     });
 
     it('should return null if no user is found', async () => {
-      const foundUser = await service.getUserByEmail('test@test.com');
+      const foundUser = await service.getUserByEmail('tester@test.com');
 
       expect(foundUser).toBeNull();
     });
